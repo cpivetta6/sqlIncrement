@@ -1,0 +1,45 @@
+CREATE TABLE artwork (
+  art_artistid int,
+  art_artworkid int,
+  art_artname varchar(255),
+  art_artyear date,
+  primary key (art_artistid, art_artworkid)
+);
+
+
+
+---CREATE SEQUENCE----
+CREATE SEQUENCE artworkid_seq;
+
+---CREATE FUNCTION-------
+CREATE OR REPLACE FUNCTION set_artworkid()
+RETURNS TRIGGER AS $$
+DECLARE
+    artist_count INTEGER;
+	artist_last_artworkid INTEGER;
+BEGIN
+    -- Verificar se já existe um registro com o mesmo art_artistid
+    SELECT COUNT(art_artistid), MAX(art_artworkid)
+    INTO artist_count, artist_last_artworkid
+    FROM artwork
+    WHERE art_artistid = NEW.art_artistid;
+    
+    -- Se não houver nenhum registro, definir art_artworkid como 1
+    IF artist_count = 0 THEN
+        NEW.art_artworkid := 1;
+    ELSE
+        -- Se houver registros, definir art_artworkid como o próximo valor da sequência
+		PERFORM SETVAL('artworkid_seq', artist_last_artworkid);
+        NEW.art_artworkid := NEXTVAL('artworkid_seq');
+    END IF;
+    artist_count = NULL;
+	artist_last_artworkid = NULL;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+--CREATE TRIGGER----
+CREATE TRIGGER set_artworkid_trigger
+BEFORE INSERT ON artwork
+FOR EACH ROW EXECUTE FUNCTION set_artworkid();
